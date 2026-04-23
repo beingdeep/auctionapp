@@ -1,10 +1,11 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "dev-secret-key"
-DEBUG = True
-ALLOWED_HOSTS: list[str] = []
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key")
+DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
+ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",") if h.strip()]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -54,12 +55,25 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+if os.getenv("DATABASE_HOST"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DATABASE_NAME", "auctiondb"),
+            "USER": os.getenv("DATABASE_USER", "auctionadmin"),
+            "PASSWORD": os.getenv("DATABASE_PASSWORD", ""),
+            "HOST": os.getenv("DATABASE_HOST"),
+            "PORT": os.getenv("DATABASE_PORT", "5432"),
+            "OPTIONS": {"sslmode": "require"},
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = []
 
