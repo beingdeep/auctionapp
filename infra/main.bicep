@@ -17,6 +17,10 @@ param containerCpu string = '0.5'
 param containerMemory string = '1.0Gi'
 
 @secure()
+@description('Django secret key used by the container app.')
+param djangoSecretKey string
+
+@secure()
 @description('PostgreSQL admin password.')
 param postgresAdminPassword string
 
@@ -32,6 +36,7 @@ var logAnalyticsName = '${projectName}-${environment}-law'
 var managedEnvName = '${projectName}-${environment}-cae'
 var containerAppName = '${projectName}-${environment}-app'
 var postgresServerName = toLower('${projectName}-${environment}-${take(suffix, 6)}-pg')
+var redisName = toLower('${projectName}-${environment}-${take(suffix, 6)}-redis')
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: logAnalyticsName
@@ -66,6 +71,20 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   }
   properties: {
     adminUserEnabled: false
+  }
+}
+
+resource redis 'Microsoft.Cache/Redis@2024-03-01' = {
+  name: redisName
+  location: location
+  properties: {
+    sku: {
+      name: 'Basic'
+      family: 'C'
+      capacity: 0
+    }
+    enableNonSslPort: false
+    minimumTlsVersion: '1.2'
   }
 }
 
@@ -137,6 +156,14 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           name: 'db-password'
           value: postgresAdminPassword
         }
+        {
+          name: 'django-secret-key'
+          value: djangoSecretKey
+        }
+        {
+          name: 'redis-connection-string'
+          value: '${redis.properties.hostName}:6380,password=${listKeys(redis.id, redis.apiVersion).primaryKey},ssl=True,abortConnect=False'
+        }
       ]
     }
     template: {
@@ -151,7 +178,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           env: [
             {
               name: 'DJANGO_SECRET_KEY'
-              value: 'replace-in-prod'
+              secretRef: 'django-secret-key'
             }
             {
               name: 'DJANGO_ALLOWED_HOSTS'
@@ -181,18 +208,23 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'DATABASE_PORT'
               value: '5432'
             }
+            {
+              name: 'REDIS_CONNECTION_STRING'
+              secretRef: 'redis-connection-string'
+            }
           ]
         }
       ]
       scale: {
         minReplicas: 1
-        maxReplicas: 3
+        maxReplicas: 2
       }
     }
   }
   dependsOn: [
     postgresDb
     allowAzureServices
+    redis
   ]
 }
 
@@ -207,7 +239,9 @@ resource acrPullAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' 
 }
 
 output containerAppUrl string = 'https://${app.properties.configuration.ingress.fqdn}'
+output containerAppName string = app.name
 output acrLoginServer string = acr.properties.loginServer
+output redisHost string = redis.properties.hostName
 output postgresFqdn string = '${postgres.name}.postgres.database.azure.com'
 output postgresDatabase string = postgresDbName
 output postgresUser string = '${postgresAdminUser}'
