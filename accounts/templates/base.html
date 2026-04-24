@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Auction Platform{% endblock %}</title>
+    <style>
+        :root {
+            --ink: #ecf4ff;
+            --muted: #a8b5cf;
+            --sand: #070b16;
+            --cream: #0d1324;
+            --line: #2a3653;
+            --accent: #6d5cff;
+            --accent-deep: #4f41d6;
+            --accent-soft: #201a4e;
+            --success: #e9f6ed;
+            --danger: #fdeaea;
+            --card-shadow: 0 20px 45px rgba(7, 11, 22, 0.45);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(109, 92, 255, 0.28), transparent 32%),
+                radial-gradient(circle at bottom right, rgba(13, 180, 255, 0.24), transparent 30%),
+                linear-gradient(135deg, #070b16 0%, var(--sand) 45%, #090f1d 100%);
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        .shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 270px 1fr;
+        }
+
+        .sidebar {
+            border-right: 1px solid rgba(220, 204, 183, 0.7);
+            background: rgba(13, 19, 36, 0.82);
+            backdrop-filter: blur(10px);
+            padding: 28px 22px;
+        }
+
+        .brand {
+            display: block;
+            margin-bottom: 26px;
+        }
+
+        .brand small {
+            display: block;
+            font-size: 0.82rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .brand strong {
+            display: block;
+            font-size: 1.8rem;
+        }
+
+        .user-chip {
+            margin-bottom: 22px;
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(159, 58, 34, 0.08);
+            color: #ced9ff;
+        }
+
+        .user-chip span {
+            display: block;
+            font-size: 0.88rem;
+            color: var(--muted);
+        }
+
+        .nav-list {
+            display: grid;
+            gap: 10px;
+        }
+        .nav-list form { margin: 0; }
+
+        .nav-link {
+            display: block;
+            padding: 12px 14px;
+            border-radius: 14px;
+            color: var(--muted);
+            background: transparent;
+            border: 0;
+            font-weight: 500;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(159, 58, 34, 0.10);
+            color: #d9d4ff;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .page-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .page-head h1 {
+            margin: 0 0 10px;
+            font-size: clamp(2rem, 4vw, 2.8rem);
+        }
+
+        .page-head p {
+            margin: 0;
+            color: var(--muted);
+            max-width: 760px;
+            line-height: 1.6;
+        }
+
+        .btn,
+        button,
+        input[type="submit"] {
+            appearance: none;
+            border: 0;
+            border-radius: 999px;
+            padding: 12px 18px;
+            background: var(--accent);
+            color: #f5f7ff;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn:hover,
+        button:hover,
+        input[type="submit"]:hover {
+            background: var(--accent-deep);
+        }
+
+        .btn.secondary {
+            background: transparent;
+            color: #d4dcf7;
+            border: 1px solid var(--line);
+        }
+
+        .grid {
+            display: grid;
+            gap: 18px;
+        }
+
+        .grid.cards {
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        .card,
+        .panel {
+            background: rgba(255, 250, 244, 0.92);
+            border: 1px solid rgba(42, 54, 83, 0.95);
+            border-radius: 22px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .card { padding: 22px; }
+        .panel { padding: 26px; }
+
+        .stat {
+            font-size: 2rem;
+            margin: 8px 0 0;
+        }
+
+        .muted { color: var(--muted); }
+
+        .messages {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .message {
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: var(--success);
+        }
+
+        .message.error {
+            background: var(--danger);
+        }
+
+        form {
+            display: grid;
+            gap: 14px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 12px 14px;
+            background: #fffdf9;
+            color: #dfe8ff;
+            background: rgba(11, 16, 30, 0.9);
+            font: inherit;
+        }
+
+        .field-errors,
+        .errorlist {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            color: #991b1b;
+            font-size: 0.92rem;
+        }
+
+        .inline-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            text-align: left;
+            padding: 14px 12px;
+            border-bottom: 1px solid rgba(220, 204, 183, 0.7);
+            vertical-align: top;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(159, 58, 34, 0.10);
+            color: var(--accent-deep);
+            font-size: 0.84rem;
+        }
+
+        .badge.online {
+            background: #dff7e7;
+            color: #166534;
+        }
+
+        .badge.offline {
+            background: #fde2e2;
+            color: #991b1b;
+        }
+
+        .two-col {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+
+        .tab-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .tab-row a {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            color: var(--muted);
+        }
+
+        .tab-row a.active {
+            background: rgba(159, 58, 34, 0.12);
+            color: var(--accent-deep);
+        }
+
+        .file-preview,
+        .avatar {
+            width: 82px;
+            height: 82px;
+            border-radius: 20px;
+            border: 1px dashed var(--line);
+            background: linear-gradient(135deg, #fffdf9 0%, #f4e5d8 100%);
+            display: grid;
+            place-items: center;
+            color: var(--muted);
+            overflow: hidden;
+        }
+
+        .file-preview img,
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .modal {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 20px;
+            background: rgba(109, 92, 255, 0.08);
+            border: 1px solid rgba(109, 92, 255, 0.25);
+        }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .inline-form .inline-fields {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            margin-bottom: 10px;
+        }
+
+        .purse-highlight {
+            background: rgba(109, 92, 255, 0.18);
+            border: 1px solid rgba(109, 92, 255, 0.35);
+            border-radius: 14px;
+            padding: 10px 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .check-grid ul {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 10px;
+        }
+
+        @media (max-width: 900px) {
+            .shell { grid-template-columns: 1fr; }
+            .sidebar { border-right: 0; border-bottom: 1px solid rgba(220, 204, 183, 0.7); }
+            .content { padding: 22px; }
+            .responsive-table thead { display: none; }
+            .responsive-table tr { display: block; border-bottom: 1px solid var(--line); padding: 8px 0; }
+            .responsive-table td { display: block; border-bottom: 0; padding: 8px 0; }
+            .responsive-table td[data-label]::before { content: attr(data-label) ": "; color: var(--muted); font-weight: 700; }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <aside class="sidebar">
+            <a href="{% url 'dashboard' %}" class="brand">
+                <small>Auction Control</small>
+                <strong>League Desk</strong>
+            </a>
+            <div class="user-chip">
+                <strong>{{ request.user.display_name }}</strong>
+                <span>{{ request.user.get_role_display }}</span>
+            </div>
+            <nav class="nav-list">
+                <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
+                {% if request.user.is_admin %}
+                    <a class="nav-link" href="{% url 'tournament-list' %}">Tournaments</a>
+                    {% if request.user.is_super_admin %}
+                        <a class="nav-link" href="{% url 'admin-management' %}">Admins</a>
+                    {% endif %}
+                {% endif %}
+                {% if request.user.is_captain %}
+                    {% for team in request.user.teams.all %}
+                        <a class="nav-link" href="{% url 'tournament-teams' team.tournament_id %}">My Team</a>
+                        {% if team.tournament.status == "live" %}
+                            <a class="nav-link" href="{% url 'auction-live' team.tournament_id %}">Live Auction</a>
+                        {% else %}
+                            <a class="nav-link" href="{% url 'auction-lobby' team.tournament_id %}">Auction Lobby</a>
+                        {% endif %}
+                    {% empty %}
+                        <span class="nav-link">My Team</span>
+                    {% endfor %}
+                {% endif %}
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="nav-link" type="submit" style="width:100%;text-align:left;">Logout</button>
+                </form>
+            </nav>
+        </aside>
+        <main class="content">
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message {% if message.tags == 'error' %}error{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% if request.user.is_authenticated %}
+        <script>
+            async function sendPresencePing() {
+                try {
+                    await fetch("{% url 'presence-ping' %}");
+                } catch (error) {
+                    console.debug("Presence ping skipped", error);
+                }
+            }
+
+            sendPresencePing();
+            setInterval(sendPresencePing, 15000);
+        </script>
+    {% endif %}
+</body>
+</html>

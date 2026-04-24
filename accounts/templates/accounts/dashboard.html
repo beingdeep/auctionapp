@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+    <section class="page-head">
+        <div>
+            <h1>Control Dashboard</h1>
+            {% if request.user.is_admin %}
+                <p>Manage your tournament calendar, keep player data ready for uploads, and control which admins can work on each tournament.</p>
+            {% else %}
+                <p>Your captain view is focused on team setup. Update your team profile before the auction date.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    {% if request.user.is_admin %}
+        <section class="grid cards">
+            <article class="card">
+                <div class="muted">Upcoming tournaments</div>
+                <p class="stat">{{ upcoming_count }}</p>
+                <a class="btn secondary" href="{% url 'tournament-list' %}">Open tournaments</a>
+            </article>
+            <article class="card">
+                <div class="muted">Previous tournaments</div>
+                <p class="stat">{{ previous_count }}</p>
+                <a class="btn secondary" href="{% url 'tournament-list' %}?view=previous">Show previous</a>
+            </article>
+            <article class="card">
+                <div class="muted">Admin accounts</div>
+                <p class="stat">{{ admin_count }}</p>
+                {% if request.user.is_super_admin %}
+                    <a class="btn secondary" href="{% url 'admin-management' %}">Manage admins</a>
+                {% else %}
+                    <span class="badge">Super admin only</span>
+                {% endif %}
+            </article>
+        </section>
+    {% else %}
+        <section class="grid">
+            {% for team in captain_teams %}
+                <article class="panel">
+                    <h2>{{ team }}</h2>
+                    <p class="muted">{{ team.tournament.name }} on {{ team.tournament.start_date }}</p>
+                    <div class="inline-actions">
+                        <a class="btn" href="{% url 'tournament-teams' team.tournament_id %}">Open team setup</a>
+                        {% if team.tournament.status == "live" %}
+                            <a class="btn secondary" href="{% url 'auction-live' team.tournament_id %}">Join live auction</a>
+                        {% else %}
+                            <a class="btn secondary" href="{% url 'auction-lobby' team.tournament_id %}">Open auction lobby</a>
+                        {% endif %}
+                    </div>
+                </article>
+            {% empty %}
+                <article class="panel">
+                    <h2>No team assigned yet</h2>
+                    <p class="muted">An admin still needs to assign you to a tournament team.</p>
+                </article>
+            {% endfor %}
+        </section>
+    {% endif %}
+{% endblock %}

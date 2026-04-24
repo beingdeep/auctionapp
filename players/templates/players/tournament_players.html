@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Players{% endblock %}
+
+{% block content %}
+    <section class="page-head">
+        <div>
+            <h1>{{ tournament.name }} Players</h1>
+            <p>Upload players and manage all player details in a single responsive table.</p>
+        </div>
+    </section>
+
+    <div class="tab-row">
+        <a href="{% url 'tournament-detail' tournament.pk %}">Overview</a>
+        <a href="{% url 'tournament-teams' tournament.pk %}">Teams</a>
+        <a class="active" href="{% url 'tournament-players' tournament.pk %}">Players</a>
+    </div>
+
+    <section class="two-col">
+        <article class="panel">
+            <h2>Import Players</h2>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}<input type="hidden" name="action" value="upload">
+                <div><label for="{{ upload_form.file.id_for_label }}">Upload file</label>{{ upload_form.file }}{{ upload_form.file.errors }}</div>
+                <button type="submit">Import players</button>
+            </form>
+        </article>
+        <article class="panel">
+            <h2>Add Player Manually</h2>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}<input type="hidden" name="action" value="create_manual">
+                {% for field in create_form %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
+                <button type="submit">Add player</button>
+            </form>
+        </article>
+    </section>
+
+    <section class="panel" style="margin-top:18px;">
+        <h2>Players Table</h2>
+        <div class="table-wrap">
+            <table class="table responsive-table">
+                <thead>
+                    <tr><th>Photo</th><th>Name</th><th>Role</th><th>Age</th><th>Base Price</th><th>Status</th><th>Save</th></tr>
+                </thead>
+                <tbody>
+                    {% for card in player_cards %}
+                        <tr>
+                            <td data-label="Photo"><div class="avatar">{% if card.player.profile_image %}<img src="{{ card.player.profile_image.url }}" alt="{{ card.player.name }}">{% else %}<span>Image</span>{% endif %}</div></td>
+                            <td data-label="Name">{{ card.player.name }}</td>
+                            <td colspan="5">
+                                <form method="post" enctype="multipart/form-data" class="inline-form">
+                                    {% csrf_token %}<input type="hidden" name="player_id" value="{{ card.player.pk }}">
+                                    <div class="inline-fields">
+                                        {% for field in card.form %}
+                                            <div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+                                        {% endfor %}
+                                    </div>
+                                    <button type="submit">Save player</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="7">No players yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% endblock %}

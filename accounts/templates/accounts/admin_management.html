@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Admins{% endblock %}
+
+{% block content %}
+    <section class="page-head">
+        <div>
+            <h1>Admin Accounts</h1>
+            <p>Create lower-privilege admin accounts for tournament operations. The protected super admin account remains outside their control.</p>
+        </div>
+    </section>
+
+    <section class="two-col">
+        <article class="panel">
+            <h2>Add Admin</h2>
+            <form method="post">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div>
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<div class="muted">{{ field.help_text }}</div>{% endif %}
+                        {{ field.errors }}
+                    </div>
+                {% endfor %}
+                <button type="submit">Create admin</button>
+            </form>
+        </article>
+        <article class="panel">
+            <h2>Current Admins</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Access</th>
+                        <th>Tournaments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for admin in admins %}
+                        <tr>
+                            <td>
+                                <strong>{{ admin.display_name }}</strong><br>
+                                <span class="muted">{{ admin.username }}</span>
+                            </td>
+                            <td>
+                                {% if admin.is_super_admin %}
+                                    <span class="badge">Protected super admin</span>
+                                {% else %}
+                                    <span class="badge">Tournament admin</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ admin.managed_total }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </article>
+    </section>
+{% endblock %}

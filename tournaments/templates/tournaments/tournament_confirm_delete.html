@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Tournament{% endblock %}
+
+{% block content %}
+    <section class="page-head">
+        <div>
+            <h1>Delete {{ object.name }}</h1>
+            <p>This removes the tournament and all of its linked teams, players, and auction data.</p>
+        </div>
+    </section>
+    <section class="panel">
+        <form method="post">
+            {% csrf_token %}
+            <div class="inline-actions">
+                <button type="submit">Delete tournament</button>
+                <a class="btn secondary" href="{% url 'tournament-detail' object.pk %}">Cancel</a>
+            </div>
+        </form>
+    </section>
+{% endblock %}

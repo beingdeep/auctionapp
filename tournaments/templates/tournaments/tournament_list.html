@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Tournaments{% endblock %}
+
+{% block content %}
+    <section class="page-head">
+        <div>
+            <h1>{% if show_previous %}Previous Tournaments{% else %}Upcoming Tournaments{% endif %}</h1>
+            <p>Upcoming tournaments stay editable for admins. Previous tournaments are read-only for everyone except the protected super admin account.</p>
+        </div>
+        <div class="inline-actions">
+            <a class="btn secondary" href="{% if show_previous %}{% url 'tournament-list' %}{% else %}{% url 'tournament-list' %}?view=previous{% endif %}">
+                {% if show_previous %}Show upcoming tournaments{% else %}Show previous tournaments{% endif %}
+            </a>
+            <a class="btn" href="{% url 'tournament-create' %}">Add tournament</a>
+        </div>
+    </section>
+
+    <section class="panel">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Tournament</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Selection</th>
+                    <th>Admins</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tournament in tournaments %}
+                    <tr>
+                        <td>
+                            <strong>{{ tournament.name }}</strong><br>
+                            <span class="muted">{{ tournament.number_of_teams }} teams</span>
+                        </td>
+                        <td>{{ tournament.get_sport_type_display }}</td>
+                        <td>{{ tournament.start_date }}</td>
+                        <td>{{ tournament.get_team_selection_method_display }}</td>
+                        <td>
+                            {% for admin in tournament.assigned_admins.all %}
+                                <span class="badge">{{ admin.username }}</span>
+                            {% empty %}
+                                <span class="muted">No admins linked</span>
+                            {% endfor %}
+                        </td>
+                        <td><a class="btn secondary" href="{% url 'tournament-detail' tournament.pk %}">Open</a></td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6">No tournaments in this view yet.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+{% endblock %}
