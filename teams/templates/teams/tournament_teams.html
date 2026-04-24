@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Teams{% endblock %}
+
+{% block content %}
+    <section class="page-head">
+        <div>
+            <h1>{{ tournament.name }} Teams</h1>
+            {% if is_admin %}
+                <p>Admins can assign captains, set team details, and prepare every team before the auction starts.</p>
+            {% else %}
+                <p>Captains can only see this team setup page. Finalize the team name, logo, colors, and motto before the auction date.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="tab-row">
+        {% if request.user.is_admin %}
+            <a href="{% url 'tournament-detail' tournament.pk %}">Overview</a>
+            <a class="active" href="{% url 'tournament-teams' tournament.pk %}">Teams</a>
+            <a href="{% url 'tournament-players' tournament.pk %}">Players</a>
+            {% if tournament.auctioneer_id == request.user.id or request.user.is_super_admin %}
+                <a href="{% url 'auction-lobby' tournament.pk %}">Live Auction</a>
+            {% endif %}
+        {% else %}
+            <a class="active" href="{% url 'tournament-teams' tournament.pk %}">Teams</a>
+            {% if tournament.status == "live" %}
+                <a href="{% url 'auction-live' tournament.pk %}">Live Auction</a>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    {% if is_admin %}
+        <section class="panel">
+            <h2>Add Captains</h2>
+            <div class="modal">
+                <p class="muted">Use this popup-style section when you do not have captain accounts ready yet. The temporary password stops working after the tournament date plus one day.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_captain">
+                    <div class="two-col">
+                        {% for field in captain_form %}
+                            <div>
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}<div class="muted">{{ field.help_text }}</div>{% endif %}
+                                {{ field.errors }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit">Create captain</button>
+                </form>
+            </div>
+        </section>
+    {% endif %}
+
+    <section class="grid cards" style="margin-top: 18px;">
+        {% for card in team_cards %}
+            <article class="card">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="team_id" value="{{ card.team.pk }}">
+                    <div class="file-preview">
+                        {% if card.team.logo %}
+                            <img src="{{ card.team.logo.url }}" alt="{{ card.team }}">
+                        {% else %}
+                            <span>Logo</span>
+                        {% endif %}
+                    </div>
+                    <h2>{{ card.team }}</h2>
+                    <p class="muted">Team slot {{ card.team.team_slot }}</p>
+                    {% if card.team.captain %}
+                        <p><span class="badge">Captain: {{ card.team.captain.display_name }}</span></p>
+                    {% endif %}
+                    {% if card.team.captain_player %}
+                        <p><span class="badge">Captain player: {{ card.team.captain_player.name }}</span></p>
+                    {% endif %}
+                    {% for field in card.form %}
+                        <div>
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
+                    {% if is_admin or can_captain_edit %}
+                        <button type="submit">Save team</button>
+                    {% else %}
+                        <span class="badge">Team setup locked</span>
+                    {% endif %}
+                </form>
+                <div class="modal">
+                    <h3>Roster</h3>
+                    {% if card.players %}
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Photo</th>
+                                    <th>Player</th>
+                                    <th>Position</th>
+                                    <th>Base Price</th>
+                                    <th>Bought For</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in card.players %}
+                                    <tr>
+                                        <td>
+                                            <div class="avatar">
+                                                {% if player.profile_image %}
+                                                    <img src="{{ player.profile_image.url }}" alt="{{ player.name }}">
+                                                {% else %}
+                                                    <span>Photo</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>{{ player.name }}</td>
+                                        <td>{{ player.role_position|default:"-" }}</td>
+                                        <td>{{ player.base_price }}</td>
+                                        <td>{{ player.sold_for|default:"0" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="muted">No players assigned yet.</p>
+                    {% endif %}
+                </div>
+            </article>
+        {% endfor %}
+    </section>
+{% endblock %}

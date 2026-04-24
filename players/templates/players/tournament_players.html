@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Players{% endblock %}
+
+{% block content %}
+    <section class="page-head">
+        <div>
+            <h1>{{ tournament.name }} Players</h1>
+            <p>Upload a CSV or add players manually, then review every player in a grid view. Admins can set the preferred position and upload a profile image per player.</p>
+        </div>
+    </section>
+
+    <div class="tab-row">
+        <a href="{% url 'tournament-detail' tournament.pk %}">Overview</a>
+        <a href="{% url 'tournament-teams' tournament.pk %}">Teams</a>
+        <a class="active" href="{% url 'tournament-players' tournament.pk %}">Players</a>
+    </div>
+
+    <section class="two-col">
+        <article class="panel">
+            <h2>Import Players</h2>
+            <p class="muted">Upload either a normal CSV file with rows, or a simple comma-separated list of player names.</p>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="upload">
+                <div>
+                    <label for="{{ upload_form.file.id_for_label }}">Upload file</label>
+                    {{ upload_form.file }}
+                    {% if upload_form.file.help_text %}<div class="muted">{{ upload_form.file.help_text }}</div>{% endif %}
+                    {{ upload_form.file.errors }}
+                </div>
+                <button type="submit">Import players</button>
+            </form>
+        </article>
+        <article class="panel">
+            <h2>Add Player Manually</h2>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_manual">
+                {% for field in create_form %}
+                    <div>
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {{ field.errors }}
+                    </div>
+                {% endfor %}
+                <button type="submit">Add player</button>
+            </form>
+        </article>
+    </section>
+
+    <section class="grid cards" style="margin-top: 18px;">
+        {% for card in player_cards %}
+            <article class="card">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="player_id" value="{{ card.player.pk }}">
+                    <div class="avatar">
+                        {% if card.player.profile_image %}
+                            <img src="{{ card.player.profile_image.url }}" alt="{{ card.player.name }}">
+                        {% else %}
+                            <span>Image</span>
+                        {% endif %}
+                    </div>
+                    <h2>{{ card.player.name }}</h2>
+                    <p class="muted">{{ tournament.get_sport_type_display }}</p>
+                    {% for field in card.form %}
+                        <div>
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
+                    <button type="submit">Save player</button>
+                </form>
+            </article>
+        {% empty %}
+            <article class="panel">
+                <h2>No players yet</h2>
+                <p class="muted">Upload your first CSV or add a player manually to populate the grid.</p>
+            </article>
+        {% endfor %}
+    </section>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Tournament Form{% endblock %}
+
+{% block content %}
+    <section class="page-head">
+        <div>
+            <h1>{% if object %}Edit Tournament{% else %}Create Tournament{% endif %}</h1>
+            <p>Set the sport, schedule, prizes, admins, and how teams will be selected. Team slots are created automatically from the team count.</p>
+        </div>
+    </section>
+
+    <section class="panel">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="two-col">
+                {% for field in form %}
+                    <div class="{% if field.name == 'assigned_admins' %}check-grid{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<div class="muted">{{ field.help_text }}</div>{% endif %}
+                        {{ field.errors }}
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="inline-actions">
+                <button type="submit">Save tournament</button>
+                <a class="btn secondary" href="{% url 'tournament-list' %}">Cancel</a>
+            </div>
+        </form>
+    </section>
+{% endblock %}

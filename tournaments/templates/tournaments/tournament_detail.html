@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tournament.name }}{% endblock %}
+
+{% block content %}
+    <section class="page-head">
+        <div>
+            <h1>{{ tournament.name }}</h1>
+            <p>{{ tournament.get_sport_type_display }} tournament on {{ tournament.start_date }}. Create teams, upload players, and assign captains from this hub.</p>
+        </div>
+        <div class="inline-actions">
+            {% if can_edit %}
+                <a class="btn secondary" href="{% url 'tournament-edit' tournament.pk %}">Edit tournament</a>
+            {% endif %}
+            {% if can_delete %}
+                <a class="btn secondary" href="{% url 'tournament-delete' tournament.pk %}">Delete</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="tab-row">
+        <a class="active" href="{% url 'tournament-detail' tournament.pk %}">Overview</a>
+        <a href="{% url 'tournament-teams' tournament.pk %}">Teams</a>
+        <a href="{% url 'tournament-players' tournament.pk %}">Players</a>
+        {% if tournament.auctioneer_id == request.user.id or request.user.is_super_admin %}
+            <a href="{% url 'auction-lobby' tournament.pk %}">Live Auction</a>
+        {% endif %}
+    </div>
+
+    <section class="two-col">
+        <article class="panel">
+            <h2>Configuration</h2>
+            <table class="table">
+                <tbody>
+                    <tr><th>Tournament date</th><td>{{ tournament.start_date }}</td></tr>
+                    <tr><th>Team count</th><td>{{ tournament.number_of_teams }}</td></tr>
+                    <tr><th>Playing members</th><td>{{ tournament.playing_members }}</td></tr>
+                    <tr><th>Total squad members</th><td>{{ tournament.total_members }}</td></tr>
+                    <tr><th>Selection method</th><td>{{ tournament.get_team_selection_method_display }}</td></tr>
+                    <tr><th>Auctioneer</th><td>{% if tournament.auctioneer %}{{ tournament.auctioneer.display_name }}{% else %}<span class="muted">Not assigned</span>{% endif %}</td></tr>
+                    <tr><th>Participation amount</th><td>{{ tournament.participation_amount }}</td></tr>
+                </tbody>
+            </table>
+        </article>
+        <article class="panel">
+            <h2>Progress</h2>
+            <p><strong>{{ teams|length }}</strong> teams prepared.</p>
+            <p><strong>{{ players_count }}</strong> players loaded.</p>
+            <div class="inline-actions">
+                <a class="btn" href="{% url 'tournament-teams' tournament.pk %}">Manage teams</a>
+                <a class="btn secondary" href="{% url 'tournament-players' tournament.pk %}">Manage players</a>
+                {% if tournament.auctioneer_id == request.user.id or request.user.is_super_admin %}
+                    <a class="btn secondary" href="{% url 'auction-lobby' tournament.pk %}">Start Auction</a>
+                {% endif %}
+            </div>
+        </article>
+    </section>
+{% endblock %}

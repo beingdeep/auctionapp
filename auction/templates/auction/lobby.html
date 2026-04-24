@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Auction Lobby{% endblock %}
+
+{% block content %}
+    <section class="page-head">
+        <div>
+            <h1>{{ tournament.name }} Auction Lobby</h1>
+            <p>Confirm the start, wait until every captain is online, then move into the live auction room.</p>
+        </div>
+        <div class="inline-actions">
+            <a class="btn secondary" href="{% url 'tournament-detail' tournament.pk %}">Back to tournament</a>
+        </div>
+    </section>
+
+    {% if is_controller and tournament.status != "live" %}
+        <section class="panel">
+            <h2>Start Auction</h2>
+            {% if needs_confirmation %}
+                <p class="muted">This tournament is not scheduled for today. Starting now will open the auction early.</p>
+            {% endif %}
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="start_auction">
+                <button type="submit">{% if needs_confirmation %}Sure, Let's Start{% else %}Start Auction{% endif %}</button>
+            </form>
+        </section>
+    {% endif %}
+
+    <section class="panel" style="margin-top: 18px;">
+        <h2>Captain Presence</h2>
+        <table class="table" id="presence-table">
+            <thead>
+                <tr>
+                    <th>Team Logo</th>
+                    <th>Team Name</th>
+                    <th>Captain Name</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in presence_rows %}
+                    <tr>
+                        <td>
+                            <div class="file-preview">
+                                {% if row.team.logo %}
+                                    <img src="{{ row.team.logo.url }}" alt="{{ row.team }}">
+                                {% else %}
+                                    <span>Logo</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>{{ row.team }}</td>
+                        <td>{{ row.captain_name }}</td>
+                        <td><span class="badge {% if row.online %}online{% else %}offline{% endif %}">{% if row.online %}Online{% else %}Offline{% endif %}</span></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if is_controller %}
+            <form method="post" style="margin-top: 16px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="go_live">
+                <button id="go-live-button" type="submit" {% if not all_captains_online %}disabled{% endif %}>Go to Live Auction</button>
+            </form>
+        {% endif %}
+    </section>
+
+    <script>
+        const lobbyStateUrl = "{% url 'auction-state' tournament.pk %}";
+        const goLiveButton = document.getElementById("go-live-button");
+
+        async function refreshLobbyState() {
+            const response = await fetch(lobbyStateUrl);
+            if (!response.ok) return;
+            const data = await response.json();
+            const tbody = document.querySelector("#presence-table tbody");
+            tbody.innerHTML = data.presence_rows.map((row) => `
+                <tr>
+                    <td><div class="file-preview">${row.logo_url ? `<img src="${row.logo_url}" alt="${row.team_name}">` : "<span>Logo</span>"}</div></td>
+                    <td>${row.team_name}</td>
+                    <td>${row.captain_name}</td>
+                    <td><span class="badge ${row.online ? "online" : "offline"}">${row.online ? "Online" : "Offline"}</span></td>
+                </tr>
+            `).join("");
+            if (goLiveButton) {
+                goLiveButton.disabled = !data.all_captains_online;
+            }
+        }
+
+        setInterval(refreshLobbyState, 4000);
+    </script>
+{% endblock %}
