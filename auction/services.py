@@ -2,6 +2,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -139,8 +140,9 @@ def place_bid(tournament, captain_user, *, custom_amount=None):
             amount = Decimal(str(custom_amount))
         except InvalidOperation as exc:
             raise ValidationError("Enter a valid custom bid amount.") from exc
-        if amount <= current_price:
-            raise ValidationError("Custom bid must be higher than the latest live bid.")
+        minimum_required = current_price + tournament.min_increment
+        if amount < minimum_required:
+            raise ValidationError(f"Bid must be at least {minimum_required}.")
     else:
         amount = current_price + tournament.min_increment
 
@@ -217,6 +219,15 @@ def auction_state(tournament):
     available_count = available_player_queryset(tournament).count()
     unsold_count = tournament.players.filter(status=PlayerStatus.UNSOLD, assigned_team__isnull=True).count()
     sold_history = recent_sold_rows(tournament)
+    purse_rows = [
+        {
+            "team_name": team.name or f"Team {team.team_slot}",
+            "purse_remaining": str(team.purse_remaining),
+            "players_count": team.players.count(),
+            "slots_left": team.remaining_slots(),
+        }
+        for team in tournament.teams.order_by("team_slot")
+    ]
     return {
         "tournament_name": tournament.name,
         "status": tournament.status,
@@ -233,6 +244,7 @@ def auction_state(tournament):
         "available_count": available_count,
         "unsold_count": unsold_count,
         "distribution_required": available_count == 0 and unsold_count > 0 and not active_round,
+        "purse_rows": purse_rows,
         "bid_history": recent_bid_rows(active_round),
         "sold_history": sold_history,
         "current_round": {
@@ -247,4 +259,39 @@ def auction_state(tournament):
         }
         if active_round
         else None,
+    }
+
+
+@transaction.atomic
+def close_tournament_auction(tournament):
+    if get_active_round(tournament):
+        raise ValidationError("Finish the current round before ending the auction.")
+    tournament.status = TournamentStatus.CLOSED
+    tournament.save(update_fields=["status"])
+
+
+def auction_report(tournament):
+    teams = tournament.teams.order_by("team_slot").prefetch_related("players")
+    rows = []
+    total_spent = Decimal("0")
+    for team in teams:
+        spent = team.players.aggregate(total=Sum("sold_for"))["total"] or Decimal("0")
+        total_spent += spent
+        rows.append(
+            {
+                "team_name": team.name or f"Team {team.team_slot}",
+                "captain_name": team.captain.display_name() if team.captain else "Not assigned",
+                "spent": spent,
+                "purse_remaining": team.purse_remaining,
+                "squad_size": team.players.count(),
+                "slots_left": team.remaining_slots(),
+                "players": team.players.order_by("-sold_for", "name"),
+            }
+        )
+    return {
+        "sold_count": tournament.players.filter(status=PlayerStatus.SOLD).count(),
+        "unsold_count": tournament.players.filter(status=PlayerStatus.UNSOLD, assigned_team__isnull=True).count(),
+        "available_count": available_player_queryset(tournament).count(),
+        "total_spent": total_spent,
+        "team_rows": rows,
     }

@@ -8,7 +8,9 @@ from django.views.generic import TemplateView
 
 from auction.services import (
     all_captains_online,
+    auction_report,
     auction_state,
+    close_tournament_auction,
     equally_distribute_unsold_players,
     get_presence_rows,
     manually_distribute_unsold_players,
@@ -52,6 +54,7 @@ class AuctionLobbyView(AuctionAccessMixin, TemplateView):
         context["all_captains_online"] = all_captains_online(tournament)
         context["is_controller"] = self.is_controller(tournament)
         context["needs_confirmation"] = tournament.start_date != timezone.localdate() and tournament.status != "live"
+        context["captain_team"] = tournament.teams.filter(captain=self.request.user).first()
         return context
 
     def post(self, request, *args, **kwargs):
@@ -136,6 +139,24 @@ class AuctionLiveView(AuctionAccessMixin, TemplateView):
                 }
                 assigned = manually_distribute_unsold_players(tournament, team_mapping)
                 messages.success(request, f"Manually assigned {assigned} unsold players.")
+            elif action == "end_auction":
+                if not self.is_controller(tournament):
+                    return HttpResponseForbidden("Only the auctioneer can end the auction.")
+                close_tournament_auction(tournament)
+                messages.success(request, "Auction ended. Final report is ready.")
+                return redirect("auction-report", pk=tournament.pk)
         except ValidationError as exc:
             messages.error(request, getattr(exc, "message", str(exc)))
         return redirect("auction-live", pk=tournament.pk)
+
+
+class AuctionReportView(AuctionAccessMixin, TemplateView):
+    template_name = "auction/report.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tournament = self.get_tournament()
+        context["tournament"] = tournament
+        context["report"] = auction_report(tournament)
+        context["is_controller"] = self.is_controller(tournament)
+        return context
