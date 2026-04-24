@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Auction Report{% endblock %}
+
+{% block content %}
+    <section class="page-head">
+        <div>
+            <h1>{{ tournament.name }} Final Auction Report</h1>
+            <p>Team-wise purchased players, total spent, and purse balance after closing the live auction.</p>
+        </div>
+        <div class="inline-actions">
+            <a class="btn secondary" href="{% url 'auction-lobby' tournament.pk %}">Lobby</a>
+            {% if is_controller and tournament.status != "closed" %}
+                <a class="btn" href="{% url 'auction-live' tournament.pk %}">Back to Live</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="grid cards">
+        <article class="card"><p class="muted">Players Sold</p><p class="stat">{{ report.sold_count }}</p></article>
+        <article class="card"><p class="muted">Players Unsold</p><p class="stat">{{ report.unsold_count }}</p></article>
+        <article class="card"><p class="muted">Players Available</p><p class="stat">{{ report.available_count }}</p></article>
+        <article class="card"><p class="muted">Total Spent</p><p class="stat">{{ report.total_spent }}</p></article>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
+        <h2>Team Summary</h2>
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Team</th>
+                        <th>Captain</th>
+                        <th>Spent</th>
+                        <th>Purse Left</th>
+                        <th>Squad Size</th>
+                        <th>Slots Left</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report.team_rows %}
+                        <tr>
+                            <td>{{ row.team_name }}</td>
+                            <td>{{ row.captain_name }}</td>
+                            <td>{{ row.spent }}</td>
+                            <td>{{ row.purse_remaining }}</td>
+                            <td>{{ row.squad_size }}</td>
+                            <td>{{ row.slots_left }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {% for row in report.team_rows %}
+        <section class="panel" style="margin-top: 18px;">
+            <h2>{{ row.team_name }} Players</h2>
+            {% if row.players %}
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr><th>Player</th><th>Position</th><th>Base Price</th><th>Bought For</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for player in row.players %}
+                                <tr>
+                                    <td>{{ player.name }}</td>
+                                    <td>{{ player.role_position|default:"-" }}</td>
+                                    <td>{{ player.base_price }}</td>
+                                    <td>{{ player.sold_for|default:"0" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="muted">No players assigned.</p>
+            {% endif %}
+        </section>
+    {% endfor %}
+{% endblock %}

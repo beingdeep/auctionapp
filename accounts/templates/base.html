@@ -6,17 +6,17 @@
     <title>{% block title %}Auction Platform{% endblock %}</title>
     <style>
         :root {
-            --ink: #1f2933;
-            --muted: #52606d;
-            --sand: #f6efe5;
-            --cream: #fffaf4;
-            --line: #dcccb7;
-            --accent: #9f3a22;
-            --accent-deep: #7f2d18;
-            --accent-soft: #f3d7c7;
+            --ink: #ecf4ff;
+            --muted: #a8b5cf;
+            --sand: #070b16;
+            --cream: #0d1324;
+            --line: #2a3653;
+            --accent: #6d5cff;
+            --accent-deep: #4f41d6;
+            --accent-soft: #201a4e;
             --success: #e9f6ed;
             --danger: #fdeaea;
-            --card-shadow: 0 22px 60px rgba(60, 40, 20, 0.10);
+            --card-shadow: 0 20px 45px rgba(7, 11, 22, 0.45);
         }
 
         * { box-sizing: border-box; }
@@ -26,8 +26,9 @@
             font-family: Georgia, "Times New Roman", serif;
             color: var(--ink);
             background:
-                radial-gradient(circle at top left, rgba(159, 58, 34, 0.14), transparent 28%),
-                linear-gradient(135deg, #f2e7d8 0%, var(--sand) 45%, #efe2cf 100%);
+                radial-gradient(circle at top left, rgba(109, 92, 255, 0.28), transparent 32%),
+                radial-gradient(circle at bottom right, rgba(13, 180, 255, 0.24), transparent 30%),
+                linear-gradient(135deg, #070b16 0%, var(--sand) 45%, #090f1d 100%);
         }
 
         a { color: inherit; text-decoration: none; }
@@ -40,7 +41,7 @@
 
         .sidebar {
             border-right: 1px solid rgba(220, 204, 183, 0.7);
-            background: rgba(255, 250, 244, 0.82);
+            background: rgba(13, 19, 36, 0.82);
             backdrop-filter: blur(10px);
             padding: 28px 22px;
         }
@@ -69,7 +70,7 @@
             padding: 14px 16px;
             border-radius: 18px;
             background: rgba(159, 58, 34, 0.08);
-            color: var(--accent-deep);
+            color: #ced9ff;
         }
 
         .user-chip span {
@@ -82,18 +83,22 @@
             display: grid;
             gap: 10px;
         }
+        .nav-list form { margin: 0; }
 
         .nav-link {
             display: block;
             padding: 12px 14px;
             border-radius: 14px;
             color: var(--muted);
+            background: transparent;
+            border: 0;
+            font-weight: 500;
         }
 
         .nav-link:hover,
         .nav-link.active {
             background: rgba(159, 58, 34, 0.10);
-            color: var(--accent-deep);
+            color: #d9d4ff;
         }
 
         .content {
@@ -128,7 +133,7 @@
             border-radius: 999px;
             padding: 12px 18px;
             background: var(--accent);
-            color: #fffaf4;
+            color: #f5f7ff;
             font: inherit;
             font-weight: 700;
             cursor: pointer;
@@ -142,7 +147,7 @@
 
         .btn.secondary {
             background: transparent;
-            color: var(--accent-deep);
+            color: #d4dcf7;
             border: 1px solid var(--line);
         }
 
@@ -158,7 +163,7 @@
         .card,
         .panel {
             background: rgba(255, 250, 244, 0.92);
-            border: 1px solid rgba(220, 204, 183, 0.82);
+            border: 1px solid rgba(42, 54, 83, 0.95);
             border-radius: 22px;
             box-shadow: var(--card-shadow);
         }
@@ -208,6 +213,8 @@
             border-radius: 14px;
             padding: 12px 14px;
             background: #fffdf9;
+            color: #dfe8ff;
+            background: rgba(11, 16, 30, 0.9);
             font: inherit;
         }
 
@@ -308,8 +315,29 @@
             margin-top: 20px;
             padding: 20px;
             border-radius: 20px;
-            background: rgba(159, 58, 34, 0.06);
-            border: 1px solid rgba(159, 58, 34, 0.12);
+            background: rgba(109, 92, 255, 0.08);
+            border: 1px solid rgba(109, 92, 255, 0.25);
+        }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .inline-form .inline-fields {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            margin-bottom: 10px;
+        }
+
+        .purse-highlight {
+            background: rgba(109, 92, 255, 0.18);
+            border: 1px solid rgba(109, 92, 255, 0.35);
+            border-radius: 14px;
+            padding: 10px 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
         }
 
         .check-grid ul {
@@ -324,6 +352,10 @@
             .shell { grid-template-columns: 1fr; }
             .sidebar { border-right: 0; border-bottom: 1px solid rgba(220, 204, 183, 0.7); }
             .content { padding: 22px; }
+            .responsive-table thead { display: none; }
+            .responsive-table tr { display: block; border-bottom: 1px solid var(--line); padding: 8px 0; }
+            .responsive-table td { display: block; border-bottom: 0; padding: 8px 0; }
+            .responsive-table td[data-label]::before { content: attr(data-label) ": "; color: var(--muted); font-weight: 700; }
         }
     </style>
 </head>
@@ -358,7 +390,10 @@
                         <span class="nav-link">My Team</span>
                     {% endfor %}
                 {% endif %}
-                <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="nav-link" type="submit" style="width:100%;text-align:left;">Logout</button>
+                </form>
             </nav>
         </aside>
         <main class="content">

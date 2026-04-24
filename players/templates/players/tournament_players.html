@@ -6,7 +6,7 @@
     <section class="page-head">
         <div>
             <h1>{{ tournament.name }} Players</h1>
-            <p>Upload a CSV or add players manually, then review every player in a grid view. Admins can set the preferred position and upload a profile image per player.</p>
+            <p>Upload players and manage all player details in a single responsive table.</p>
         </div>
     </section>
 
@@ -19,66 +19,51 @@
     <section class="two-col">
         <article class="panel">
             <h2>Import Players</h2>
-            <p class="muted">Upload either a normal CSV file with rows, or a simple comma-separated list of player names.</p>
             <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="upload">
-                <div>
-                    <label for="{{ upload_form.file.id_for_label }}">Upload file</label>
-                    {{ upload_form.file }}
-                    {% if upload_form.file.help_text %}<div class="muted">{{ upload_form.file.help_text }}</div>{% endif %}
-                    {{ upload_form.file.errors }}
-                </div>
+                {% csrf_token %}<input type="hidden" name="action" value="upload">
+                <div><label for="{{ upload_form.file.id_for_label }}">Upload file</label>{{ upload_form.file }}{{ upload_form.file.errors }}</div>
                 <button type="submit">Import players</button>
             </form>
         </article>
         <article class="panel">
             <h2>Add Player Manually</h2>
             <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="create_manual">
-                {% for field in create_form %}
-                    <div>
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {{ field.errors }}
-                    </div>
-                {% endfor %}
+                {% csrf_token %}<input type="hidden" name="action" value="create_manual">
+                {% for field in create_form %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
                 <button type="submit">Add player</button>
             </form>
         </article>
     </section>
 
-    <section class="grid cards" style="margin-top: 18px;">
-        {% for card in player_cards %}
-            <article class="card">
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <input type="hidden" name="player_id" value="{{ card.player.pk }}">
-                    <div class="avatar">
-                        {% if card.player.profile_image %}
-                            <img src="{{ card.player.profile_image.url }}" alt="{{ card.player.name }}">
-                        {% else %}
-                            <span>Image</span>
-                        {% endif %}
-                    </div>
-                    <h2>{{ card.player.name }}</h2>
-                    <p class="muted">{{ tournament.get_sport_type_display }}</p>
-                    {% for field in card.form %}
-                        <div>
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {{ field.errors }}
-                        </div>
+    <section class="panel" style="margin-top:18px;">
+        <h2>Players Table</h2>
+        <div class="table-wrap">
+            <table class="table responsive-table">
+                <thead>
+                    <tr><th>Photo</th><th>Name</th><th>Role</th><th>Age</th><th>Base Price</th><th>Status</th><th>Save</th></tr>
+                </thead>
+                <tbody>
+                    {% for card in player_cards %}
+                        <tr>
+                            <td data-label="Photo"><div class="avatar">{% if card.player.profile_image %}<img src="{{ card.player.profile_image.url }}" alt="{{ card.player.name }}">{% else %}<span>Image</span>{% endif %}</div></td>
+                            <td data-label="Name">{{ card.player.name }}</td>
+                            <td colspan="5">
+                                <form method="post" enctype="multipart/form-data" class="inline-form">
+                                    {% csrf_token %}<input type="hidden" name="player_id" value="{{ card.player.pk }}">
+                                    <div class="inline-fields">
+                                        {% for field in card.form %}
+                                            <div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+                                        {% endfor %}
+                                    </div>
+                                    <button type="submit">Save player</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="7">No players yet.</td></tr>
                     {% endfor %}
-                    <button type="submit">Save player</button>
-                </form>
-            </article>
-        {% empty %}
-            <article class="panel">
-                <h2>No players yet</h2>
-                <p class="muted">Upload your first CSV or add a player manually to populate the grid.</p>
-            </article>
-        {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </section>
 {% endblock %}

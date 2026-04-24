@@ -6,36 +6,43 @@
     <section class="page-head">
         <div>
             <h1>{{ tournament.name }} Live Auction</h1>
-            <p>The auctioneer controls player selection, sold, and unsold actions. Captains can place bids from their own team accounts.</p>
+            <p>Fast captain bidding with live purse tracking. Auctioneer controls player flow and closes the auction with one click.</p>
         </div>
         <div class="inline-actions">
             <a class="btn secondary" href="{% url 'auction-lobby' tournament.pk %}">Lobby</a>
+            <a class="btn secondary" href="{% url 'auction-report' tournament.pk %}">Report</a>
             {% if is_controller %}
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="select_random_player">
-                    <button type="submit">Select Random Player</button>
-                </form>
+                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="select_random_player"><button type="submit">Next Player</button></form>
             {% endif %}
         </div>
     </section>
+
+    {% if state.purse_rows %}
+        <section class="panel" style="margin-bottom:18px;">
+            <h2>Purse Remaining</h2>
+            <div class="table-wrap">
+                <table class="table" id="purse-table">
+                    <thead><tr><th>Team</th><th>Purse Left</th><th>Players</th><th>Slots Left</th></tr></thead>
+                    <tbody>
+                        {% for row in state.purse_rows %}
+                            <tr><td>{{ row.team_name }}</td><td>{{ row.purse_remaining }}</td><td>{{ row.players_count }}</td><td>{{ row.slots_left }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% endif %}
 
     <section class="two-col">
         <article class="panel">
             <h2>Live Round</h2>
             <div id="live-round">
                 {% if state.current_round %}
-                    <div class="avatar">
-                        {% if state.current_round.player_image %}
-                            <img src="{{ state.current_round.player_image }}" alt="{{ state.current_round.player_name }}">
-                        {% else %}
-                            <span>Player</span>
-                        {% endif %}
-                    </div>
+                    <div class="avatar">{% if state.current_round.player_image %}<img src="{{ state.current_round.player_image }}" alt="{{ state.current_round.player_name }}">{% else %}<span>Player</span>{% endif %}</div>
                     <h3>{{ state.current_round.player_name }}</h3>
-                    <p>Base price: <strong>{{ state.current_round.base_price }}</strong></p>
-                    <p>Current bid: <strong>{{ state.current_round.current_bid }}</strong></p>
-                    <p>Latest team: <strong>{{ state.current_round.current_team|default:"No bids yet" }}</strong></p>
+                    <p>Base: <strong>{{ state.current_round.base_price }}</strong></p>
+                    <p>Current: <strong>{{ state.current_round.current_bid }}</strong></p>
+                    <p>Team: <strong>{{ state.current_round.current_team|default:"No bids yet" }}</strong></p>
                     <p>Timer: <strong id="timer-seconds">{{ state.current_round.seconds_remaining }}</strong> sec</p>
                 {% else %}
                     <p class="muted">No player is active right now.</p>
@@ -44,37 +51,27 @@
 
             {% if is_controller and state.current_round %}
                 <div class="inline-actions" style="margin-top: 16px;">
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="sold">
-                        <button type="submit">Sold</button>
-                    </form>
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="unsold">
-                        <button type="submit">Unsold</button>
-                    </form>
+                    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="sold"><button type="submit">Sold</button></form>
+                    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="unsold"><button type="submit">Unsold</button></form>
                 </div>
+            {% endif %}
+            {% if is_controller %}
+                <form method="post" style="margin-top:16px;">{% csrf_token %}<input type="hidden" name="action" value="end_auction"><button type="submit">End Live Auction</button></form>
             {% endif %}
         </article>
 
         <article class="panel">
             <h2>Captain Bidding</h2>
-            {% if captain_team and state.current_round %}
+            {% if captain_team %}
                 <p><span class="badge">{{ captain_team.name }}</span></p>
+                <p class="purse-highlight">My Purse Left: {{ captain_team.purse_remaining }}</p>
+            {% endif %}
+            {% if captain_team and state.current_round %}
+                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="quick_bid"><button type="submit">Bid +{{ tournament.min_increment }}</button></form>
                 <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="quick_bid">
-                    <button type="submit">Bid +{{ tournament.min_increment }}</button>
-                </form>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="custom_bid">
-                    <div>
-                        <label for="custom_amount">Custom amount</label>
-                        <input id="custom_amount" type="number" step="0.01" name="custom_amount">
-                    </div>
-                    <button type="submit">Place custom bid</button>
+                    {% csrf_token %}<input type="hidden" name="action" value="custom_bid">
+                    <div><label for="custom_amount">Custom amount</label><input id="custom_amount" type="number" step="0.01" name="custom_amount"></div>
+                    <button type="submit">Place Bid</button>
                 </form>
             {% elif captain_team %}
                 <p class="muted">Wait for the auctioneer to select the next player.</p>
@@ -86,150 +83,44 @@
 
     <section class="two-col" style="margin-top: 18px;">
         <article class="panel">
-            <div class="inline-actions" style="justify-content: space-between;">
-                <h2>Bid Activity</h2>
-                <span class="muted">Latest on top</span>
-            </div>
-            <table class="table" id="bid-history-table">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Captain</th>
-                        <th>Team</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for bid in state.bid_history %}
-                        <tr>
-                            <td>{{ bid.timestamp }}</td>
-                            <td>{{ bid.captain_name }}</td>
-                            <td>{{ bid.team_name }}</td>
-                            <td>{{ bid.amount }}</td>
-                        </tr>
-                    {% empty %}
-                        <tr><td colspan="4">No bids yet.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <h2>Bid Activity</h2>
+            <div class="table-wrap"><table class="table" id="bid-history-table"><thead><tr><th>Time</th><th>Captain</th><th>Team</th><th>Amount</th></tr></thead><tbody>{% for bid in state.bid_history %}<tr><td>{{ bid.timestamp }}</td><td>{{ bid.captain_name }}</td><td>{{ bid.team_name }}</td><td>{{ bid.amount }}</td></tr>{% empty %}<tr><td colspan="4">No bids yet.</td></tr>{% endfor %}</tbody></table></div>
         </article>
-
         <article class="panel">
-            <div class="inline-actions" style="justify-content: space-between;">
-                <h2>Latest Sold Players</h2>
-                <label for="sold-sort" style="margin: 0;">Sort</label>
-                <select id="sold-sort">
-                    <option value="time">By time</option>
-                    <option value="amount">By sold amount</option>
-                </select>
-            </div>
-            <table class="table" id="sold-history-table">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Player</th>
-                        <th>Team</th>
-                        <th>Sold Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for sold in state.sold_history %}
-                        <tr data-time="{{ sold.timestamp_value }}" data-amount="{{ sold.amount_value }}">
-                            <td>{{ sold.timestamp }}</td>
-                            <td>{{ sold.player_name }}</td>
-                            <td>{{ sold.team_name }}</td>
-                            <td>{{ sold.amount }}</td>
-                        </tr>
-                    {% empty %}
-                        <tr><td colspan="4">No sold players yet.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="inline-actions" style="justify-content: space-between;"><h2>Latest Sold Players</h2><select id="sold-sort"><option value="time">By time</option><option value="amount">By sold amount</option></select></div>
+            <div class="table-wrap"><table class="table" id="sold-history-table"><thead><tr><th>Time</th><th>Player</th><th>Team</th><th>Sold Amount</th></tr></thead><tbody>{% for sold in state.sold_history %}<tr data-time="{{ sold.timestamp_value }}" data-amount="{{ sold.amount_value }}"><td>{{ sold.timestamp }}</td><td>{{ sold.player_name }}</td><td>{{ sold.team_name }}</td><td>{{ sold.amount }}</td></tr>{% empty %}<tr><td colspan="4">No sold players yet.</td></tr>{% endfor %}</tbody></table></div>
         </article>
     </section>
-
-    {% if captain_team %}
-        <section class="panel" style="margin-top: 18px;">
-            <h2>My Bought Players</h2>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Photo</th>
-                        <th>Player</th>
-                        <th>Position</th>
-                        <th>Base Price</th>
-                        <th>Bought For</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for player in captain_players %}
-                        <tr>
-                            <td>
-                                <div class="avatar">
-                                    {% if player.profile_image %}
-                                        <img src="{{ player.profile_image.url }}" alt="{{ player.name }}">
-                                    {% else %}
-                                        <span>Photo</span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td>{{ player.name }}</td>
-                            <td>{{ player.role_position|default:"-" }}</td>
-                            <td>{{ player.base_price }}</td>
-                            <td>{{ player.sold_for|default:"0" }}</td>
-                        </tr>
-                    {% empty %}
-                        <tr><td colspan="5">You have not bought any players yet.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </section>
-    {% endif %}
 
     {% if is_controller and state.distribution_required %}
         <section class="panel" style="margin-top: 18px;">
             <h2>Resolve Unsold Players</h2>
             <div class="inline-actions">
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="recycle_unsold">
-                    <button type="submit">Recycle unsold players</button>
-                </form>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="equal_distribute">
-                    <button type="submit">Equally distribute</button>
-                </form>
+                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="recycle_unsold"><button type="submit">Recycle unsold players</button></form>
+                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="equal_distribute"><button type="submit">Equally distribute</button></form>
             </div>
-
             <div class="modal">
                 <h3>Manual distribution</h3>
                 <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="manual_distribute">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Player</th>
-                                <th>Assign team</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for player in unsold_players %}
-                                <tr>
-                                    <td>{{ player.name }}</td>
-                                    <td>
-                                        <select name="assign_player_{{ player.pk }}">
-                                            <option value="">Leave unassigned</option>
-                                            {% for team in teams %}
-                                                <option value="{{ team.pk }}">{{ team }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    {% csrf_token %}<input type="hidden" name="action" value="manual_distribute">
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead><tr><th>Player</th><th>Assign team</th></tr></thead>
+                            <tbody>
+                                {% for player in unsold_players %}
+                                    <tr>
+                                        <td>{{ player.name }}</td>
+                                        <td>
+                                            <select name="assign_player_{{ player.pk }}">
+                                                <option value="">Leave unassigned</option>
+                                                {% for team in teams %}<option value="{{ team.pk }}">{{ team }}</option>{% endfor %}
+                                            </select>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                     <button type="submit">Save manual distribution</button>
                 </form>
             </div>
@@ -240,87 +131,12 @@
         const liveStateUrl = "{% url 'auction-state' tournament.pk %}";
         const soldSort = document.getElementById("sold-sort");
         let countdownTarget = {% if state.current_round and state.current_round.ends_at %}new Date("{{ state.current_round.ends_at|escapejs }}"){% else %}null{% endif %};
-
-        function renderSoldHistory(rows) {
-            const tbody = document.querySelector("#sold-history-table tbody");
-            if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="4">No sold players yet.</td></tr>';
-                return;
-            }
-            tbody.innerHTML = rows.map((row) => `
-                <tr data-time="${row.timestamp_value}" data-amount="${row.amount_value}">
-                    <td>${row.timestamp}</td>
-                    <td>${row.player_name}</td>
-                    <td>${row.team_name}</td>
-                    <td>${row.amount}</td>
-                </tr>
-            `).join("");
-        }
-
-        function sortSoldHistory() {
-            const tbody = document.querySelector("#sold-history-table tbody");
-            const rows = Array.from(tbody.querySelectorAll("tr[data-time]"));
-            rows.sort((a, b) => {
-                if (soldSort.value === "amount") {
-                    return Number(b.dataset.amount) - Number(a.dataset.amount);
-                }
-                return b.dataset.time.localeCompare(a.dataset.time);
-            });
-            rows.forEach((row) => tbody.appendChild(row));
-        }
-
-        function renderBidHistory(rows) {
-            const tbody = document.querySelector("#bid-history-table tbody");
-            if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="4">No bids yet.</td></tr>';
-                return;
-            }
-            tbody.innerHTML = rows.map((row) => `
-                <tr>
-                    <td>${row.timestamp}</td>
-                    <td>${row.captain_name}</td>
-                    <td>${row.team_name}</td>
-                    <td>${row.amount}</td>
-                </tr>
-            `).join("");
-        }
-
-        function tickTimer() {
-            const timerNode = document.getElementById("timer-seconds");
-            if (!timerNode || !countdownTarget) return;
-            const seconds = Math.max(0, Math.ceil((countdownTarget.getTime() - Date.now()) / 1000));
-            timerNode.textContent = seconds;
-        }
-
-        async function refreshLiveState() {
-            const response = await fetch(liveStateUrl);
-            if (!response.ok) return;
-            const data = await response.json();
-            const liveRound = document.getElementById("live-round");
-            if (!data.current_round) {
-                liveRound.innerHTML = '<p class="muted">No player is active right now.</p>';
-                countdownTarget = null;
-                renderBidHistory(data.bid_history || []);
-                renderSoldHistory(data.sold_history || []);
-                sortSoldHistory();
-                return;
-            }
-            liveRound.innerHTML = `
-                <div class="avatar">${data.current_round.player_image ? `<img src="${data.current_round.player_image}" alt="${data.current_round.player_name}">` : "<span>Player</span>"}</div>
-                <h3>${data.current_round.player_name}</h3>
-                <p>Base price: <strong>${data.current_round.base_price}</strong></p>
-                <p>Current bid: <strong>${data.current_round.current_bid}</strong></p>
-                <p>Latest team: <strong>${data.current_round.current_team || "No bids yet"}</strong></p>
-                <p>Timer: <strong id="timer-seconds">${data.current_round.seconds_remaining}</strong> sec</p>
-            `;
-            countdownTarget = data.current_round.ends_at ? new Date(data.current_round.ends_at) : null;
-            renderBidHistory(data.bid_history || []);
-            renderSoldHistory(data.sold_history || []);
-            sortSoldHistory();
-        }
-
-        soldSort?.addEventListener("change", sortSoldHistory);
-        setInterval(refreshLiveState, 1000);
-        setInterval(tickTimer, 250);
+        function renderPurseRows(rows){const tbody=document.querySelector("#purse-table tbody"); if(!tbody) return; if(!rows.length){tbody.innerHTML='';return;} tbody.innerHTML=rows.map((r)=>`<tr><td>${r.team_name}</td><td>${r.purse_remaining}</td><td>${r.players_count}</td><td>${r.slots_left}</td></tr>`).join("");}
+        function renderSoldHistory(rows){const tbody=document.querySelector("#sold-history-table tbody"); if(!rows.length){tbody.innerHTML='<tr><td colspan="4">No sold players yet.</td></tr>'; return;} tbody.innerHTML=rows.map((row)=>`<tr data-time="${row.timestamp_value}" data-amount="${row.amount_value}"><td>${row.timestamp}</td><td>${row.player_name}</td><td>${row.team_name}</td><td>${row.amount}</td></tr>`).join("");}
+        function sortSoldHistory(){const tbody=document.querySelector("#sold-history-table tbody"); const rows=Array.from(tbody.querySelectorAll("tr[data-time]")); rows.sort((a,b)=>soldSort.value==="amount"?Number(b.dataset.amount)-Number(a.dataset.amount):b.dataset.time.localeCompare(a.dataset.time)); rows.forEach((row)=>tbody.appendChild(row));}
+        function renderBidHistory(rows){const tbody=document.querySelector("#bid-history-table tbody"); if(!rows.length){tbody.innerHTML='<tr><td colspan="4">No bids yet.</td></tr>'; return;} tbody.innerHTML=rows.map((row)=>`<tr><td>${row.timestamp}</td><td>${row.captain_name}</td><td>${row.team_name}</td><td>${row.amount}</td></tr>`).join("");}
+        function tickTimer(){const timerNode=document.getElementById("timer-seconds"); if(!timerNode||!countdownTarget) return; const seconds=Math.max(0,Math.ceil((countdownTarget.getTime()-Date.now())/1000)); timerNode.textContent=seconds;}
+        async function refreshLiveState(){const response=await fetch(liveStateUrl); if(!response.ok) return; const data=await response.json(); const liveRound=document.getElementById("live-round"); renderPurseRows(data.purse_rows||[]); if(!data.current_round){liveRound.innerHTML='<p class="muted">No player is active right now.</p>'; countdownTarget=null; renderBidHistory(data.bid_history||[]); renderSoldHistory(data.sold_history||[]); sortSoldHistory(); return;} liveRound.innerHTML=`<div class="avatar">${data.current_round.player_image?`<img src="${data.current_round.player_image}" alt="${data.current_round.player_name}">`:"<span>Player</span>"}</div><h3>${data.current_round.player_name}</h3><p>Base: <strong>${data.current_round.base_price}</strong></p><p>Current: <strong>${data.current_round.current_bid}</strong></p><p>Team: <strong>${data.current_round.current_team||"No bids yet"}</strong></p><p>Timer: <strong id="timer-seconds">${data.current_round.seconds_remaining}</strong> sec</p>`; countdownTarget=data.current_round.ends_at?new Date(data.current_round.ends_at):null; renderBidHistory(data.bid_history||[]); renderSoldHistory(data.sold_history||[]); sortSoldHistory();}
+        soldSort?.addEventListener("change", sortSoldHistory); setInterval(refreshLiveState, 1000); setInterval(tickTimer, 250);
     </script>
 {% endblock %}

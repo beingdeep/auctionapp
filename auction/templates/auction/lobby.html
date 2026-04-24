@@ -6,23 +6,23 @@
     <section class="page-head">
         <div>
             <h1>{{ tournament.name }} Auction Lobby</h1>
-            <p>Confirm the start, wait until every captain is online, then move into the live auction room.</p>
+            <p>Wait until every captain is online, then move into the live auction room.</p>
         </div>
         <div class="inline-actions">
             <a class="btn secondary" href="{% url 'tournament-detail' tournament.pk %}">Back to tournament</a>
+            {% if captain_team and tournament.status == "live" %}
+                <a class="btn" href="{% url 'auction-live' tournament.pk %}">Join Live Auction</a>
+            {% endif %}
         </div>
     </section>
 
     {% if is_controller and tournament.status != "live" %}
         <section class="panel">
             <h2>Start Auction</h2>
-            {% if needs_confirmation %}
-                <p class="muted">This tournament is not scheduled for today. Starting now will open the auction early.</p>
-            {% endif %}
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="start_auction">
-                <button type="submit">{% if needs_confirmation %}Sure, Let's Start{% else %}Start Auction{% endif %}</button>
+                <button type="submit">Start Auction</button>
             </form>
         </section>
     {% endif %}
