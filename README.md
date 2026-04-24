@@ -36,7 +36,9 @@ python manage.py runserver
 - Azure Database for PostgreSQL Flexible Server + database + firewall rule for Azure services
 - Azure Cache for Redis (for Channels/websocket scaling)
 
-### 1) Deploy infrastructure
+### Option A: Bash scripts (Linux/macOS/Git Bash)
+
+#### 1) Deploy infrastructure
 ```bash
 ./scripts/deploy_infra.sh \
   --subscription "<subscription-id-or-name>" \
@@ -50,14 +52,14 @@ python manage.py runserver
 
 This creates infra and writes output variables to `.azure/<project>-<env>.env`.
 
-### 2) Deploy/update application image
+#### 2) Deploy/update application image
 ```bash
 ./scripts/deploy_app.sh --env-file .azure/auctionapp-dev.env
 ```
 
 This builds from your local source, pushes to ACR, and updates Container App to the new image.
 
-### 3) One-command end-to-end deploy
+#### 3) One-command end-to-end deploy
 ```bash
 ./scripts/deploy_all.sh \
   --subscription "<subscription-id-or-name>" \
@@ -69,10 +71,47 @@ This builds from your local source, pushes to ACR, and updates Container App to 
   --django-secret "<django-secret-key>"
 ```
 
+### Option B: PowerShell scripts (Windows)
+
+> Run from PowerShell in the repo root. If needed once on your machine:
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+
+#### 1) Deploy infrastructure
+```powershell
+.\scripts\deploy_infra.ps1 `
+  -Subscription "<subscription-id-or-name>" `
+  -ResourceGroup "rg-auction-dev" `
+  -Location "eastus" `
+  -Project "auctionapp" `
+  -Env "dev" `
+  -PostgresPassword "<strong-password>" `
+  -DjangoSecret "<django-secret-key>"
+```
+
+#### 2) Deploy/update application image
+```powershell
+.\scripts\deploy_app.ps1 -EnvFile .azure/auctionapp-dev.env
+```
+
+#### 3) One-command end-to-end deploy
+```powershell
+.\scripts\deploy_all.ps1 `
+  -Subscription "<subscription-id-or-name>" `
+  -ResourceGroup "rg-auction-dev" `
+  -Location "eastus" `
+  -Project "auctionapp" `
+  -Env "dev" `
+  -PostgresPassword "<strong-password>" `
+  -DjangoSecret "<django-secret-key>"
+```
+
 After deployment completes, the app is reachable from the public internet using the Container App URL printed by the script.
 
 ## Infra files
 - `infra/main.bicep`: full Azure infrastructure template.
-- `scripts/deploy_infra.sh`: deploys infra and stores output variables.
-- `scripts/deploy_app.sh`: builds + pushes image and updates live app.
-- `scripts/deploy_all.sh`: runs infra and app deployment together.
+- `scripts/deploy_infra.sh`: deploys infra and stores output variables (Bash).
+- `scripts/deploy_app.sh`: builds + pushes image and updates live app (Bash).
+- `scripts/deploy_all.sh`: runs infra and app deployment together (Bash).
+- `scripts/deploy_infra.ps1`: deploys infra and stores output variables (PowerShell/Windows).
+- `scripts/deploy_app.ps1`: builds + pushes image and updates live app (PowerShell/Windows).
+- `scripts/deploy_all.ps1`: runs infra and app deployment together (PowerShell/Windows).
